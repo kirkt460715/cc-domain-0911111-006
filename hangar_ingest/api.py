@@ -5,6 +5,9 @@ from hangar_ingest.runs import batches, claims, inspection, journal, partitions,
 from hangar_ingest.runs.orchestrator import Pipeline
 from hangar_ingest.exports import releases, tabular, watermarks, transfer
 from hangar_ingest.exports.contracts import DeliveryContracts
+from hangar_ingest.training import builder as training_builder
+from hangar_ingest.training import splits as training_splits
+from hangar_ingest.training import store as training_store
 
 
 class Application:
@@ -99,6 +102,17 @@ class Application:
             'inspect.lineage': (inspection.lineage, {'release_id'}, set()),
             'journal.verify': (journal.verify, set(), set()),
             'journal.page': (journal.page, set(), {'after', 'limit'}),
+            'training.preview': (training_builder.build_run, {'config'}, set()),
+            'training.preview.multi': (training_builder.build_multi_aircraft_run, {'config'}, set()),
+            'training.save': (training_builder.save_run, {'run_id', 'config'}, set()),
+            'training.save.multi': (training_builder.save_multi_aircraft_run, {'run_id', 'config'}, set()),
+            'training.get': (training_store.get_run, {'run_id'}, set()),
+            'training.list': (training_store.list_runs, set(), set()),
+            'training.samples': (training_store.list_samples, {'run_id'}, {'buildable'}),
+            'training.split': (training_splits.save_manifest, {'run_id', 'split_id'}, {'fold_count'}),
+            'training.split.get': (training_store.get_split, {'run_id', 'split_id'}, set()),
+            'training.split.list': (training_store.list_splits, {'run_id'}, set()),
+            'training.split.verify': (training_splits.verify_manifest, {'run_id', 'split_id'}, set()),
         }
         self.bound = {
             'source.register': (self.sources.register, {'manifest_id', 'source', 'start', 'end', 'events'}, {'revision'}),

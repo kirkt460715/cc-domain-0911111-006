@@ -80,11 +80,14 @@ class Database:
         self.db.execute('PRAGMA synchronous=FULL')
         self.depth = 0
         version = self.db.execute('PRAGMA user_version').fetchone()[0]
-        if version not in (0, 1):
+        if version not in (0, 1, 2):
             self.db.close()
             fail('schema_version', 'Unsupported database version', version=version)
+        from hangar_ingest.training.store import TRAINING_SCHEMA
         self.db.executescript(SCHEMA)
-        self.db.execute('PRAGMA user_version=1')
+        self.db.executescript(TRAINING_SCHEMA)
+        if version in (0, 1):
+            self.db.execute('PRAGMA user_version=2')
 
     def __enter__(self):
         return self

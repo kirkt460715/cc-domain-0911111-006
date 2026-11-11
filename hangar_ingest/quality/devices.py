@@ -112,6 +112,8 @@ def add_calibration(db, calibration_id, device_id, valid_from, valid_until, scal
             'INSERT INTO calibrations(calibration_id,device_id,valid_from,valid_until,scale,offset,clock_offset_us,revision,created_at) '
             'VALUES(?,?,?,?,?,?,?,1,?)', (calibration_id, *values, db.clock()),
         )
+        from hangar_ingest.training.store import record_calibration_version
+        record_calibration_version(db, db.one('SELECT * FROM calibrations WHERE calibration_id=?', (calibration_id,)))
         journal.record(db, 'calibration.created', {'calibration_id': calibration_id, 'device_id': device_id})
         return db.one('SELECT * FROM calibrations WHERE calibration_id=?', (calibration_id,))
 
@@ -142,8 +144,11 @@ def correct_calibration(db, calibration_id, revision, scale, offset, clock_offse
             'UPDATE calibrations SET scale=?,offset=?,clock_offset_us=?,revision=revision+1 WHERE calibration_id=?',
             (decimal_string(scale), decimal_string(offset), clock_offset_us, calibration_id),
         )
+        updated = db.one('SELECT * FROM calibrations WHERE calibration_id=?', (calibration_id,))
+        from hangar_ingest.training.store import record_calibration_version
+        record_calibration_version(db, updated)
         journal.record(db, 'calibration.corrected', {'calibration_id': calibration_id, 'revision': revision + 1})
-        return db.one('SELECT * FROM calibrations WHERE calibration_id=?', (calibration_id,))
+        return updated
 
 
 def list_devices(db, aircraft=None):
